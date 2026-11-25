@@ -40,11 +40,8 @@
       g.quadraticCurveTo(x + panelW / 2, top + h + 7, x + sway, top + h);
       g.closePath(); g.fill();
       g.lineWidth = 2.5; g.strokeStyle = '#1a2440'; g.stroke();
-      // white crest
-      g.beginPath(); g.arc(x + panelW / 2, top + 15, 8, 0, Math.PI * 2);
-      g.strokeStyle = '#f8f9fa'; g.lineWidth = 2.5; g.stroke();
-      g.beginPath(); g.arc(x + panelW / 2, top + 15, 3, 0, Math.PI * 2);
-      g.fillStyle = '#f8f9fa'; g.fill();
+      // plain panels only — no crest circles (a row of empty rings above
+      // the rail read as broken UI dots, not as a curtain)
     }
     g.fillStyle = '#171126';
     g.fillRect(0, top, 1280, 3);
@@ -61,6 +58,36 @@
     // live tickets spread across the whole rail (no row of empty slots)
     const n = state.tickets.length;
     const ticketX = (i) => n > 1 ? 14 + i * (1280 - 28 - 292) / (n - 1) : 14;
+    // SHARED PREP connector, drawn FIRST — behind the ticket cards and
+    // dipping BELOW them: the dashed arc leaves each shared icon, passes
+    // behind both cards (so it can never strike through a title or a
+    // price) and bows out under the cards along the rail before rising
+    // to the matching icon. The orange rings on the icons themselves
+    // (drawn with the cards, above this arc) carry the match.
+    if (n >= 2) {
+      outer:
+      for (let i = 0; i < n; i++) {
+        for (let k = i + 1; k < n; k++) {
+          const di = UR.dishById(state.tickets[i].dishId);
+          const dk = UR.dishById(state.tickets[k].dishId);
+          for (const c of di.components) {
+            if (dk.components.indexOf(c) < 0) continue;
+            const xi = ticketX(i) - (1 - state.tickets[i].slide) * 330 + 44 + di.components.indexOf(c) * 58;
+            const xk = ticketX(k) - (1 - state.tickets[k].slide) * 330 + 44 + dk.components.indexOf(c) * 58;
+            g.save();
+            g.setLineDash([7, 5]);
+            g.strokeStyle = '#f08c00'; g.lineWidth = 3.5;
+            g.beginPath();
+            g.moveTo(xi, 184);
+            g.quadraticCurveTo((xi + xk) / 2, 330, xk, 184);
+            g.stroke();
+            g.setLineDash([]);
+            g.restore();
+            break outer;
+          }
+        }
+      }
+    }
     state.tickets.forEach((t, i) => {
       const dish = UR.dishById(t.dishId);
       const w = 292, h = 112;
@@ -109,38 +136,6 @@
       const bw = Math.max(0, (w - 28) * frac);
       if (bw > 2) g.fillRect(x + 14, y + h - 10, bw, 6);
     });
-    // SHARED PREP, explained visually: a dashed connector arcs between
-    // the matching ingredient icons on the two tickets that share a prep
-    // step (their icons already carry the orange ring). A ticket that
-    // shares nothing gets no connector and no stamp.
-    if (n >= 2) {
-      outer:
-      for (let i = 0; i < n; i++) {
-        for (let k = i + 1; k < n; k++) {
-          const di = UR.dishById(state.tickets[i].dishId);
-          const dk = UR.dishById(state.tickets[k].dishId);
-          for (const c of di.components) {
-            if (dk.components.indexOf(c) < 0) continue;
-            const xi = ticketX(i) - (1 - state.tickets[i].slide) * 330 + 44 + di.components.indexOf(c) * 58;
-            const xk = ticketX(k) - (1 - state.tickets[k].slide) * 330 + 44 + dk.components.indexOf(c) * 58;
-            g.save();
-            g.setLineDash([7, 5]);
-            g.strokeStyle = '#f08c00'; g.lineWidth = 3.5;
-            g.beginPath();
-            g.moveTo(xi, 172);
-            g.quadraticCurveTo((xi + xk) / 2, 128, xk, 172);
-            g.stroke();
-            g.setLineDash([]);
-            // matching connector dots on both shared icons
-            g.fillStyle = '#f08c00';
-            g.beginPath(); g.arc(xi, 172, 5, 0, Math.PI * 2); g.fill();
-            g.beginPath(); g.arc(xk, 172, 5, 0, Math.PI * 2); g.fill();
-            g.restore();
-            break outer;
-          }
-        }
-      }
-    }
     if (!state.tickets.length && state.mode === 'play') {
       text(g, 'ORDERS INCOMING…', 300, 178, 22, '#868e96', 'center', true);
     }
@@ -209,6 +204,12 @@
   function drawOver(g, state) {
     g.fillStyle = 'rgba(10,8,23,0.45)';
     g.fillRect(0, 0, 1280, 800);
+    // panel scaled ~1.4x about the screen centre, so SERVICE COMPLETE,
+    // the stars, SCORE / SERVED / TIPS stay legible even when the shot
+    // is shrunk into a contact-sheet strip; the stall and customers
+    // stay visible in the margins around it
+    g.save();
+    g.translate(640, 400); g.scale(1.4, 1.4); g.translate(-640, -400);
     // panel with a warm paper body and a red header band
     UR.rrect(g, 330, 196, 620, 408, 16, '#fff6db');
     g.save();
@@ -235,6 +236,7 @@
     text(g, 'x' + Math.max(1, state.bestCombo), 810, 518, 30, INK, 'right', true);
     UR.rrect(g, 455, 548, 370, 44, 10, '#e63946');
     text(g, 'press SPACE for next service', 640, 571, 19, '#ffffff', 'center', true);
+    g.restore();
   }
 
   function drawHudAll(g, state, now) {
