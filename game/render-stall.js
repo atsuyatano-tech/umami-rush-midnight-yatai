@@ -23,7 +23,35 @@
     { skin: '#ffe0bd', hair: '#8a5a33', hairStyle: 'spiky', top: '#2a9d8f', accent: '#f4a261' }
   ];
 
-  function drawCustomer(g, c, x, y, s, happy) {
+  // The classic anger vein-pop mark, drawn in red at a head's top corner.
+  function drawAngerMark(g, x, y, s) {
+    g.save();
+    g.strokeStyle = '#e63946'; g.lineWidth = 3.5; g.lineCap = 'round';
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 + 0.4;
+      g.beginPath();
+      g.moveTo(x + Math.cos(a) * s * 0.3, y + Math.sin(a) * s * 0.3);
+      g.quadraticCurveTo(x + Math.cos(a) * s * 0.85, y + Math.sin(a) * s * 0.85,
+        x + Math.cos(a + 0.5) * s * 1.05, y + Math.sin(a + 0.5) * s * 1.05);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  // A white speech bubble holding the mini icon of a dish, so an order
+  // visibly belongs to the person asking for it.
+  function drawOrderBubble(g, dishId, x, y, s) {
+    g.save();
+    UR.rrect(g, x - s * 1.15, y - s * 0.95, s * 2.3, s * 1.9, 9, '#ffffff');
+    g.beginPath();
+    g.moveTo(x - s * 0.25, y + s * 0.92); g.lineTo(x + s * 0.3, y + s * 0.92); g.lineTo(x, y + s * 1.45);
+    g.closePath(); g.fillStyle = '#ffffff'; g.fill();
+    g.lineWidth = 3; g.strokeStyle = INK; g.stroke();
+    UR.drawDish(g, dishId, x, y + s * 0.05, s * 0.62);
+    g.restore();
+  }
+
+  function drawCustomer(g, c, x, y, s, happy, angry) {
     // torso
     g.beginPath(); g.arc(x, y + s * 1.15, s * 0.95, Math.PI, 0);
     g.closePath();
@@ -50,15 +78,22 @@
       }
       g.closePath(); g.fill();
     }
-    // face: eyes + mouth (happy = open smile while being served)
+    // face: eyes + mouth (happy = open smile while being served;
+    // angry = slanted brows, a frown and a red anger mark)
     g.fillStyle = INK;
     g.beginPath(); g.arc(x - s * 0.22, y + s * 0.05, s * 0.06, 0, Math.PI * 2); g.fill();
     g.beginPath(); g.arc(x + s * 0.22, y + s * 0.05, s * 0.06, 0, Math.PI * 2); g.fill();
     g.strokeStyle = INK; g.lineWidth = 2.5;
+    if (angry) {
+      g.beginPath(); g.moveTo(x - s * 0.36, y - s * 0.14); g.lineTo(x - s * 0.1, y - s * 0.04); g.stroke();
+      g.beginPath(); g.moveTo(x + s * 0.36, y - s * 0.14); g.lineTo(x + s * 0.1, y - s * 0.04); g.stroke();
+    }
     g.beginPath();
     if (happy) g.arc(x, y + s * 0.18, s * 0.2, 0.1 * Math.PI, 0.9 * Math.PI);
+    else if (angry) g.arc(x, y + s * 0.42, s * 0.14, 1.15 * Math.PI, 1.85 * Math.PI);
     else g.arc(x, y + s * 0.22, s * 0.14, 0.15 * Math.PI, 0.85 * Math.PI);
     g.stroke();
+    if (angry) drawAngerMark(g, x + s * 0.52, y - s * 0.5, s * 0.34);
     // blush
     g.fillStyle = 'rgba(255,120,140,0.5)';
     g.beginPath(); g.arc(x - s * 0.4, y + s * 0.22, s * 0.09, 0, Math.PI * 2); g.fill();
@@ -121,13 +156,14 @@
       UR.rrect(g, bx + 8, 344, 10, 12, 3, col);
       g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(bx + 5, 362, 5, 20);
     });
-    // a hanging menu board on the shelf
-    UR.rrect(g, 700, 344, 150, 48, 6, '#fff6db');
-    text(g, "TONIGHT'S MENU", 775, 360, 12, INK, 'center', true);
-    text(g, 'RAMEN ¥110 · RICE ¥95', 775, 380, 11, '#7f1d2d', 'center', true);
-    // paper lanterns on strings
+    // a hanging menu board on the shelf, kept clear of every lantern so
+    // its full text stays readable in every shot
+    UR.rrect(g, 686, 344, 176, 48, 6, '#fff6db');
+    text(g, "TONIGHT'S MENU", 774, 360, 13, INK, 'center', true);
+    text(g, 'RAMEN ¥110 · RICE ¥95', 774, 380, 12, '#7f1d2d', 'center', true);
+    // paper lanterns on strings (x positions chosen to clear the menu board)
     for (let i = 0; i < 5; i++) {
-      const lx = 70 + i * 175, ly = 330 + Math.sin(now * 1.6 + i) * 4;
+      const lx = [70, 245, 420, 595, 950][i], ly = 330 + Math.sin(now * 1.6 + i) * 4;
       g.strokeStyle = '#0f0b1e'; g.lineWidth = 3;
       g.beginPath(); g.moveTo(lx, 84); g.lineTo(lx, ly - 22); g.stroke();
       g.beginPath(); g.ellipse(lx, ly, 25, 30, 0, 0, Math.PI * 2);
@@ -157,12 +193,18 @@
   }
 
   // Stools at the street edge with the three customers waiting / eating.
+  // Each seated customer is linked to a live ticket: an order bubble over
+  // their head shows the dish they are waiting for, and the customer whose
+  // ticket is nearly out of patience is visibly impatient — anger mark,
+  // frown and a tapping foot — while the others smile.
   function drawStreetCustomers(g, state, now) {
     const spots = [
       { x: 84, c: 0 }, { x: 196, c: 1 }, { x: 1186, c: 2 }
     ];
-    for (const sp of spots) {
+    spots.forEach((sp, i) => {
       const bob = Math.sin(now * 2 + sp.x) * 2;
+      const t = state.tickets[i];
+      const impatient = !!t && (t.patience / t.patienceMax) < 0.25;
       // stool: round seat + legs
       g.fillStyle = '#7f1d2d';
       g.beginPath(); g.ellipse(sp.x, 742, 30, 9, 0, 0, Math.PI * 2); g.fill();
@@ -170,8 +212,16 @@
       g.strokeStyle = '#5c1420'; g.lineWidth = 6;
       g.beginPath(); g.moveTo(sp.x - 18, 748); g.lineTo(sp.x - 22, 782); g.stroke();
       g.beginPath(); g.moveTo(sp.x + 18, 748); g.lineTo(sp.x + 22, 782); g.stroke();
-      drawCustomer(g, CUSTOMERS[sp.c], sp.x, 690 + bob, 30, sp.c === 2 && !!state.passDish);
-    }
+      if (impatient) {
+        // tapping foot beside the stool, bouncing fast
+        const tap = Math.abs(Math.sin(now * 14)) * 5;
+        g.beginPath(); g.ellipse(sp.x + 34, 784 - tap, 11, 5.5, -0.25, 0, Math.PI * 2);
+        g.fillStyle = INK; g.fill();
+      }
+      drawCustomer(g, CUSTOMERS[sp.c], sp.x, 690 + bob, 30,
+        !impatient && (sp.c === 2 ? !!state.passDish : true), impatient);
+      if (t) drawOrderBubble(g, t.dishId, sp.x + 6, 606 + bob, 26);
+    });
   }
 
   function drawCounter(g, state, now) {
@@ -197,16 +247,18 @@
   }
 
   function drawFridge(g, state) {
-    // open ingredient crates on the counter, 3 x 3, keys 1..9
+    // open ingredient crates on the counter, 3 x 3, keys 1..9. The tiles
+    // are as large as the counter front allows (the shelf band above the
+    // counter is kept shallow) and the sprites fill them, so each of the
+    // 9 ingredients reads at contact-sheet size.
     UR.INGREDIENTS.forEach((ing, i) => {
       const col = i % 3, row = (i / 3) | 0;
-      const x = 34 + col * 68, y = 498 + row * 40;
-      UR.rrect(g, x, y, 64, 36, 5, '#3d5a80');
-      g.fillStyle = 'rgba(190,227,255,0.35)'; g.fillRect(x + 3, y + 3, 58, 8);
-      UR.drawItemIcon(g, ing.id, x + 21, y + 18, 11);
-      text(g, String(i + 1), x + 52, y + 18, 14, '#ffffff', 'center', true);
+      const x = 32 + col * 68, y = 494 + row * 46;
+      UR.rrect(g, x, y, 66, 44, 5, '#3d5a80');
+      g.fillStyle = 'rgba(190,227,255,0.35)'; g.fillRect(x + 3, y + 3, 60, 8);
+      UR.drawItemIcon(g, ing.id, x + 23, y + 23, 15);
+      text(g, String(i + 1), x + 55, y + 22, 15, '#ffffff', 'center', true);
     });
-    text(g, 'INGREDIENTS', 130, 632, 13, '#ffe8cc', 'center', true);
   }
 
   function drawChopBoard(g, state, now) {
@@ -280,7 +332,17 @@
       g.arc(x, y, 46, -Math.PI / 2 + Math.PI * 2 * (UR.PERFECT_START / UR.OVER_END),
         -Math.PI / 2 + Math.PI * 2 * (UR.PERFECT_END / UR.OVER_END));
       g.strokeStyle = '#ffd93d'; g.lineWidth = 3; g.stroke();
-      text(g, stage.toUpperCase(), x, y + 58, 12, stageColor[stage], 'center', true);
+      // doneness label on a high-contrast chip (white on near-black, with
+      // a coloured edge) ABOVE the pan, where the chef's body never covers
+      // it — the state is legible even at thumbnail size
+      const label = stage.toUpperCase();
+      const chipW = label.length * 8.4 + 16;
+      g.save();
+      UR.rrect(g, x - chipW / 2, y - 72, chipW, 22, 6, '#171126');
+      g.strokeStyle = stageColor[stage]; g.lineWidth = 2.5;
+      g.strokeRect(x - chipW / 2 + 1, y - 71, chipW - 2, 20);
+      text(g, label, x, y - 60, 12.5, '#ffffff', 'center', true);
+      g.restore();
     });
   }
 
@@ -366,14 +428,23 @@
   }
 
   function drawPass(g, state, now) {
-    // serving window in the back wall with waiting customers
+    // serving window in the back wall with waiting customers. Each
+    // customer carries a speech bubble with the mini icon of the dish
+    // they ordered, so the bowl at the pass visibly belongs to a person;
+    // the customer whose ticket is nearly out of patience frowns with an
+    // anger mark while the rest smile.
     UR.rrect(g, 978, 268, 250, 168, 10, '#0f0b1e');
     UR.rrect(g, 978, 268, 250, 34, 10, '#7f1d2d');
     text(g, 'PASS — SERVE HERE', 1103, 286, 14, '#ffffff', 'center', true);
     state.tickets.forEach((t, i) => {
       if (i > 2) return;
-      const cx = 1024 + i * 56, cy = 356;
-      drawCustomer(g, CUSTOMERS[i % 3], cx, cy, 26, !!state.passDish && state.passDish.slide >= 1);
+      const cx = 1024 + i * 56, cy = 368;
+      const impatient = (t.patience / t.patienceMax) < 0.25;
+      const receiving = !!state.passDish && state.passDish.dishId === t.dishId && state.passDish.slide >= 1;
+      drawCustomer(g, CUSTOMERS[i % 3], cx, cy, 26, receiving && !impatient, impatient);
+      // bubble shows the dish THIS customer ordered — for the receiving
+      // customer it is the very dish sitting READY at the pass
+      drawOrderBubble(g, t.dishId, cx + 4, 322, 19);
     });
     if (!state.tickets.length) text(g, 'no orders… yet', 1103, 380, 14, '#868e96', 'center', true);
     // trash bin
@@ -389,7 +460,9 @@
     if (!state.passDish) return;
     const pd = state.passDish;
     const x = 850 + (1090 - 850) * Math.min(1, pd.slide);
-    UR.drawDish(g, pd.dishId, x, 520, 36);
+    // drawn BIG: broth, noodle swirls, egg half and onion must read as a
+    // ramen bowl even at thumbnail size
+    UR.drawDish(g, pd.dishId, x, 522, 48);
     // steam wisps over the finished bowl
     g.save();
     g.strokeStyle = 'rgba(248,249,250,0.55)'; g.lineWidth = 3.5; g.lineCap = 'round';
@@ -397,19 +470,19 @@
       const ph = (now * 0.85 + wI * 0.5) % 1;
       g.globalAlpha = 0.55 * (1 - ph);
       g.beginPath();
-      g.moveTo(x - 12 + wI * 24, 486 - ph * 14);
-      g.quadraticCurveTo(x - 18 + wI * 24, 474 - ph * 14, x - 8 + wI * 24, 462 - ph * 12);
+      g.moveTo(x - 14 + wI * 28, 478 - ph * 14);
+      g.quadraticCurveTo(x - 20 + wI * 28, 466 - ph * 14, x - 10 + wI * 28, 454 - ph * 12);
       g.stroke();
     }
     g.restore();
     if (pd.slide >= 1) {
-      // READY flag
+      // READY flag, planted beside the bowl (never inside the food)
       g.strokeStyle = INK; g.lineWidth = 3;
-      g.beginPath(); g.moveTo(x + 32, 500); g.lineTo(x + 32, 460); g.stroke();
+      g.beginPath(); g.moveTo(x + 52, 506); g.lineTo(x + 52, 462); g.stroke();
       g.fillStyle = '#51cf66';
-      g.beginPath(); g.moveTo(x + 32, 460); g.lineTo(x + 64, 468); g.lineTo(x + 32, 478); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(x + 52, 462); g.lineTo(x + 84, 470); g.lineTo(x + 52, 480); g.closePath(); g.fill();
       g.lineWidth = 2; g.strokeStyle = INK; g.stroke();
-      text(g, 'READY!', x + 2, 622, 17, '#51cf66', 'center', true);
+      text(g, 'READY!', x + 2, 628, 18, '#51cf66', 'center', true);
     }
   }
 
