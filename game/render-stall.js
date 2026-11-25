@@ -158,9 +158,11 @@
     });
     // a hanging menu board on the shelf, kept clear of every lantern so
     // its full text stays readable in every shot
-    UR.rrect(g, 686, 344, 176, 48, 6, '#fff6db');
-    text(g, "TONIGHT'S MENU", 774, 360, 13, INK, 'center', true);
-    text(g, 'RAMEN ¥110 · RICE ¥95', 774, 380, 12, '#7f1d2d', 'center', true);
+    UR.rrect(g, 668, 326, 212, 86, 6, '#fff6db');
+    text(g, "TONIGHT'S MENU", 774, 342, 13, INK, 'center', true);
+    text(g, 'RAMEN ¥110', 774, 362, 12.5, '#7f1d2d', 'center', true);
+    text(g, 'RICE ¥115', 774, 380, 12.5, '#7f1d2d', 'center', true);
+    text(g, 'OKONOMIYAKI ¥85', 774, 398, 12.5, '#7f1d2d', 'center', true);
     // paper lanterns on strings (x positions chosen to clear the menu board)
     for (let i = 0; i < 5; i++) {
       const lx = [70, 245, 420, 595, 950][i], ly = 330 + Math.sin(now * 1.6 + i) * 4;
@@ -447,11 +449,28 @@
       drawOrderBubble(g, t.dishId, cx + 4, 322, 19);
     });
     if (!state.tickets.length) text(g, 'no orders… yet', 1103, 380, 14, '#868e96', 'center', true);
-    // trash bin
-    UR.rrect(g, 1188, 566, 58, 76, 6, '#495057');
-    UR.rrect(g, 1182, 556, 70, 14, 6, '#343a40');
-    text(g, 'TRASH', 1217, 606, 11, '#ced4da', 'center', true);
-    text(g, 'T', 1217, 624, 11, '#ced4da', 'center', true);
+  }
+
+  // Trash bin at the right end of the counter, drawn AFTER the counter
+  // (drawPass runs before it and the counter would paint the bin away).
+  // A burnt item sits visibly inside it — charred egg silhouette poking
+  // over the rim — so the burnt -> trash route reads at a glance.
+  function drawTrashBin(g, state, now) {
+    // high on the counter front, right end: low enough to sit on the
+    // counter, high enough that no street customer's order bubble
+    // (drawn later, lower) can ever cover the bin or its label
+    UR.drawItemIcon(g, 'egg-grilled', 1217, 482, 15);
+    g.save();
+    g.beginPath(); g.arc(1217, 482, 19, 0, Math.PI * 2); g.clip();
+    g.fillStyle = 'rgba(10,6,6,0.62)'; g.fillRect(1198, 463, 38, 38);
+    g.strokeStyle = '#8f2d23'; g.lineWidth = 2.5; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(1206, 470); g.lineTo(1216, 482); g.lineTo(1210, 494); g.stroke();
+    g.beginPath(); g.moveTo(1228, 472); g.lineTo(1220, 484); g.stroke();
+    g.restore();
+    UR.rrect(g, 1186, 494, 62, 66, 6, '#495057');
+    UR.rrect(g, 1180, 484, 74, 14, 6, '#343a40');
+    text(g, 'TRASH', 1217, 522, 12, '#ffffff', 'center', true);
+    text(g, 'T = bin it', 1217, 544, 10, '#ced4da', 'center', true);
   }
 
   // The finished dish on the counter at the pass, drawn after the counter
@@ -460,9 +479,15 @@
     if (!state.passDish) return;
     const pd = state.passDish;
     const x = 850 + (1090 - 850) * Math.min(1, pd.slide);
+    // the PASS dish sits on a small wooden tray in a deep-BLUE bowl, so
+    // READY at the pass never blurs into the red PLATING bowl beside it
+    g.beginPath(); g.ellipse(x, 522 + 52, 74, 13, 0, 0, Math.PI * 2);
+    g.fillStyle = '#6f4525'; g.fill();
+    g.lineWidth = 3.5; g.strokeStyle = INK; g.stroke();
+    g.fillStyle = '#8a5a33'; g.fillRect(x - 58, 522 + 44, 116, 7);
     // drawn BIG: broth, noodle swirls, egg half and onion must read as a
     // ramen bowl even at thumbnail size
-    UR.drawDish(g, pd.dishId, x, 522, 48);
+    UR.drawDish(g, pd.dishId, x, 522, 48, '#1d4ed8');
     // steam wisps over the finished bowl
     g.save();
     g.strokeStyle = 'rgba(248,249,250,0.55)'; g.lineWidth = 3.5; g.lineCap = 'round';
@@ -561,6 +586,7 @@
     drawChopBoard(g, state, now);
     drawGrill(g, state, now);
     drawPlating(g, state, now);
+    drawTrashBin(g, state, now);
     drawPassDish(g, state, now);
     drawChef(g, state, now);
     drawStreetCustomers(g, state, now);
