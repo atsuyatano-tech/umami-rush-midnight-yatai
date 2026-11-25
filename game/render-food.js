@@ -405,9 +405,17 @@
     } else if (stage === 'overdone') {
       g.fillStyle = 'rgba(122,58,10,0.42)'; g.fillRect(x - 34, y - 34, 68, 68);
     } else if (stage === 'burnt') {
-      g.fillStyle = 'rgba(5,5,8,0.8)'; g.fillRect(x - 34, y - 34, 68, 68);
-      g.fillStyle = 'rgba(40,40,46,0.9)';
-      disc(g, x - 12, y - 6, 9); disc(g, x + 10, y + 8, 11); disc(g, x + 2, y - 14, 7);
+      // fully blackened: a near-opaque char layer, cracked char marks and
+      // ash spots, so BURNT reads from the food alone, never from a label
+      g.fillStyle = 'rgba(3,3,5,0.9)'; g.fillRect(x - 34, y - 34, 68, 68);
+      g.fillStyle = 'rgba(38,38,44,0.95)';
+      disc(g, x - 12, y - 6, 10); disc(g, x + 10, y + 8, 12); disc(g, x + 2, y - 14, 8); disc(g, x - 4, y + 16, 7);
+      g.strokeStyle = 'rgba(120,120,130,0.85)'; g.lineWidth = 2.5; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - 22, y - 18); g.lineTo(x - 6, y - 2); g.lineTo(x - 14, y + 14); g.stroke();
+      g.beginPath(); g.moveTo(x + 20, y - 20); g.lineTo(x + 8, y - 4); g.lineTo(x + 18, y + 10); g.stroke();
+      g.beginPath(); g.moveTo(x - 24, y + 4); g.lineTo(x - 8, y + 6); g.stroke();
+      g.fillStyle = 'rgba(190,190,200,0.5)';
+      disc(g, x - 18, y + 20, 3); disc(g, x + 16, y - 24, 3); disc(g, x + 24, y + 18, 2.5);
     }
     g.restore();
     if (stage === 'perfect') { // shine sparkles
@@ -435,6 +443,17 @@
     }
   }
 
+  // Nori as it is actually served on a bowl: a small dark sheet laid FLAT
+  // across the rim, never a big upright rectangle sticking out of the food.
+  function drawNoriFlat(g, x, y, s) {
+    g.save();
+    g.translate(x, y); g.rotate(-0.1); g.scale(1, 0.52);
+    rrect(g, -s * 0.95, -s * 0.62, s * 1.9, s * 1.24, 5, '#14532d');
+    g.fillStyle = 'rgba(134,239,172,0.3)';
+    g.fillRect(-s * 0.7, -s * 0.4, s * 1.4, s * 0.34);
+    g.restore();
+  }
+
   // A finished dish: the real bowl, filled component by component.
   function drawDish(g, dishId, x, y, s) {
     const dish = UR.dishById(dishId);
@@ -446,7 +465,8 @@
       drawItemIcon(g, 'batter', x, y, s * 1.15);
       rest.forEach((c, i) => {
         const off = (i - (rest.length - 1) / 2) * s * 0.78;
-        drawItemIcon(g, c, x + off, y - s * 0.18, s * 0.5);
+        if (c === 'nori') drawNoriFlat(g, x + off, y - s * 0.3, s * 0.45);
+        else drawItemIcon(g, c, x + off, y - s * 0.18, s * 0.5);
       });
       return;
     }
@@ -462,10 +482,12 @@
       noodleSwirls(g, x, y, R);
       narutomaki(g, x - R * 0.55, y - R * 0.3, R * 0.17);
     }
-    // components sit IN the bowl, fanned across the surface
+    // components sit IN the bowl, fanned across the surface; nori lies
+    // flat on the rim instead of standing up out of the bowl
     rest.forEach((c, i) => {
       const off = (i - (rest.length - 1) / 2) * R * 0.62;
-      drawItemIcon(g, c, x + off, y - R * 0.22, s * 0.46);
+      if (c === 'nori') drawNoriFlat(g, x + off, y - R * 0.34, s * 0.42);
+      else drawItemIcon(g, c, x + off, y - R * 0.22, s * 0.52);
     });
     if (dish.components.indexOf('onion-chopped') >= 0) onionScatter(g, x, y, R, 5);
     shine(g, x - R * 0.6, y + R * 0.3, R * 0.13);
@@ -474,6 +496,7 @@
   window.UR = window.UR || {};
   window.UR.drawItemIcon = drawItemIcon;
   window.UR.drawDish = drawDish;
+  window.UR.drawNoriFlat = drawNoriFlat;
   window.UR.drawPanFood = drawPanFood;
   window.UR.drawBowlBase = drawBowlBase;
   window.UR.rrect = rrect;
