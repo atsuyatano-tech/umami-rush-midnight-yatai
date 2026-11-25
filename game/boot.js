@@ -1,6 +1,6 @@
 // boot.js — wires everything together: the fixed-timestep loop, the
 // service lifecycle (title -> play -> over), and a pose hook that stages
-// exact game states for screenshots (?pose=hero|calm|juggle|serve).
+// exact game states for screenshots (?pose=hero|calm|juggle|results).
 (function () {
   'use strict';
   const UR = window.UR;
@@ -74,20 +74,36 @@
     state.mode = 'play';
     state.frozen = true;
     if (name === 'hero') {
-      // RUSH: every station alive, the full doneness gradient in one frame
+      // RUSH: every station alive, the full doneness gradient in one frame.
+      // Tickets 1+2 share a prep step; ticket 3 shares nothing (no stamp)
+      // and is nearly out of patience, so its customer is impatient.
       state.elapsed = 126; state.timeLeft = 24;
       state.score = 860; state.tips = 130; state.combo = 4; state.bestCombo = 6; state.servedCount = 7;
-      state.tickets = [ticket('deluxe-ramen', 0.9), ticket('miso-ramen', 0.55), ticket('shrimp-rice', 0.35)];
+      state.tickets = [ticket('miso-ramen', 0.9), ticket('shrimp-rice', 0.55), ticket('egg-oko', 0.18)];
       state.pans[0] = { item: { kind: 'plain', ing: 'pork' }, t: 8.2 };   // PERFECT, golden
       state.pans[1] = { item: { kind: 'plain', ing: 'shrimp' }, t: 1.0 }; // pale raw, just placed
-      state.pans[2] = { item: { kind: 'plain', ing: 'egg' }, t: 12.6 };   // near-burnt, first smoke
+      state.pans[2] = { item: { kind: 'plain', ing: 'egg' }, t: 14.6 };   // fully BURNT, thick smoke
       state.plate = ['noodles', 'pork-grilled'];
       state.prepTray = [{ kind: 'chopped', ing: 'onion' }, { kind: 'grilled', ing: 'egg', quality: 'perfect' }];
-      state.passDish = { dishId: 'pork-rice', quality: 'perfect', slide: 1 };
-      state.chef.x = 745; state.chef.targetX = 850; state.chef.facing = 1;
-      state.chef.moving = true; state.chef.walkPhase = 1.3;
-      state.chef.hands = [{ kind: 'chopped', ing: 'onion' }];
+      state.passDish = { dishId: 'miso-ramen', quality: 'perfect', slide: 1 };
+      // the chef tends pan 1 at the GRILL, clear of the plating bowl so
+      // the mid-assembly bowl stays fully visible
+      state.chef.x = 478; state.chef.targetX = 478; state.chef.facing = 1;
+      state.chef.moving = false; state.chef.walkPhase = 0;
+      state.chef.hands = [];
       puff(1090, 500, 3); puff(478, 505, 2);
+    } else if (name === 'results') {
+      // End of service: the timer has expired in normal play (mode 'over')
+      // with a strong night behind it — 12 served, three stars.
+      state.mode = 'over';
+      state.elapsed = 150; state.timeLeft = 0;
+      state.score = 1420; state.tips = 260; state.combo = 8; state.bestCombo = 8;
+      state.servedCount = 12; state.lostCount = 1;
+      state.tickets = [ticket('egg-ramen', 0.6)];
+      state.pans[0] = { item: { kind: 'plain', ing: 'pork' }, t: 8.2 };
+      state.passDish = { dishId: 'miso-ramen', quality: 'perfect', slide: 1 };
+      state.chef.x = 1000; state.chef.targetX = 1000; state.chef.facing = 1;
+      puff(1090, 500, 3);
     } else if (name === 'calm' || name === 'planning') {
       // Early calm service: one ticket, chef mid-chop, one raw pan, full timer
       state.elapsed = 8; state.timeLeft = 142;
