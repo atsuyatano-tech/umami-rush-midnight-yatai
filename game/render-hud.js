@@ -58,10 +58,13 @@
     drawNoren(g, now);
     if (rush) text(g, 'RUSH!', 1236, 138, 22, '#ffd93d', 'center', true);
     const shared = UR.sharedComponents(state);
+    // live tickets spread across the whole rail (no row of empty slots)
+    const n = state.tickets.length;
+    const ticketX = (i) => n > 1 ? 14 + i * (1280 - 28 - 292) / (n - 1) : 14;
     state.tickets.forEach((t, i) => {
       const dish = UR.dishById(t.dishId);
       const w = 292, h = 112;
-      const x = 14 + i * 302 - (1 - t.slide) * 330;
+      const x = ticketX(i) - (1 - t.slide) * 330;
       const y = 124;
       UR.rrect(g, x, y, w, h, 8, '#fff6db');
       // colour-coded family band across the ticket top
@@ -106,6 +109,38 @@
       const bw = Math.max(0, (w - 28) * frac);
       if (bw > 2) g.fillRect(x + 14, y + h - 10, bw, 6);
     });
+    // SHARED PREP, explained visually: a dashed connector arcs between
+    // the matching ingredient icons on the two tickets that share a prep
+    // step (their icons already carry the orange ring). A ticket that
+    // shares nothing gets no connector and no stamp.
+    if (n >= 2) {
+      outer:
+      for (let i = 0; i < n; i++) {
+        for (let k = i + 1; k < n; k++) {
+          const di = UR.dishById(state.tickets[i].dishId);
+          const dk = UR.dishById(state.tickets[k].dishId);
+          for (const c of di.components) {
+            if (dk.components.indexOf(c) < 0) continue;
+            const xi = ticketX(i) - (1 - state.tickets[i].slide) * 330 + 44 + di.components.indexOf(c) * 58;
+            const xk = ticketX(k) - (1 - state.tickets[k].slide) * 330 + 44 + dk.components.indexOf(c) * 58;
+            g.save();
+            g.setLineDash([7, 5]);
+            g.strokeStyle = '#f08c00'; g.lineWidth = 3.5;
+            g.beginPath();
+            g.moveTo(xi, 172);
+            g.quadraticCurveTo((xi + xk) / 2, 128, xk, 172);
+            g.stroke();
+            g.setLineDash([]);
+            // matching connector dots on both shared icons
+            g.fillStyle = '#f08c00';
+            g.beginPath(); g.arc(xi, 172, 5, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(xk, 172, 5, 0, Math.PI * 2); g.fill();
+            g.restore();
+            break outer;
+          }
+        }
+      }
+    }
     if (!state.tickets.length && state.mode === 'play') {
       text(g, 'ORDERS INCOMING…', 300, 178, 22, '#868e96', 'center', true);
     }
@@ -168,16 +203,38 @@
     text(g, 'CLICK OR PRESS SPACE', 640, 560, 22, '#ffffff', 'center', true);
   }
 
+  // End-of-service results: a panel over the still-visible stall — the
+  // served bowl at the pass, the customers, the lanterns all stay in
+  // frame around it, so the night visibly closes its loop.
   function drawOver(g, state) {
-    g.fillStyle = 'rgba(10,8,23,0.78)';
+    g.fillStyle = 'rgba(10,8,23,0.45)';
     g.fillRect(0, 0, 1280, 800);
-    text(g, 'SERVICE OVER!', 640, 250, 56, '#ffd93d', 'center', true);
+    // panel with a warm paper body and a red header band
+    UR.rrect(g, 330, 196, 620, 408, 16, '#fff6db');
+    g.save();
+    g.beginPath();
+    g.moveTo(346, 196); g.lineTo(934, 196);
+    g.quadraticCurveTo(950, 196, 950, 212);
+    g.lineTo(950, 262); g.lineTo(330, 262); g.lineTo(330, 212);
+    g.quadraticCurveTo(330, 196, 346, 196);
+    g.closePath();
+    g.fillStyle = '#7f1d2d'; g.fill();
+    g.restore();
+    text(g, 'SERVICE COMPLETE', 640, 230, 40, '#ffffff', 'center', true);
+    // big earned stars
     const stars = UR.starsFor(state.score);
-    text(g, '★'.repeat(stars) + '☆'.repeat(3 - stars), 640, 322, 54, '#ffd93d', 'center', true);
-    text(g, 'SCORE  ' + state.score + '      TIPS  ¥' + state.tips, 640, 392, 28, '#f8f9fa', 'center', true);
-    text(g, 'Served ' + state.servedCount + ' dishes · Best combo x' + Math.max(1, state.bestCombo) + ' · Lost ' + state.lostCount + ' tickets', 640, 436, 21, '#ced4da', 'center', true);
-    UR.rrect(g, 490, 486, 300, 58, 12, '#e63946');
-    text(g, 'SPACE — NEXT NIGHT', 640, 516, 22, '#ffffff', 'center', true);
+    text(g, '★'.repeat(stars) + '☆'.repeat(3 - stars), 640, 308, 64, '#f08c00', 'center', true);
+    // the night's numbers, one per line, large and high contrast
+    text(g, 'SCORE', 470, 372, 20, '#7f1d2d', 'left', true);
+    text(g, String(state.score), 810, 372, 34, INK, 'right', true);
+    text(g, 'SERVED', 470, 422, 20, '#7f1d2d', 'left', true);
+    text(g, state.servedCount + ' dishes', 810, 422, 30, INK, 'right', true);
+    text(g, 'TIPS', 470, 470, 20, '#7f1d2d', 'left', true);
+    text(g, '¥' + state.tips, 810, 470, 30, INK, 'right', true);
+    text(g, 'BEST COMBO', 470, 518, 20, '#7f1d2d', 'left', true);
+    text(g, 'x' + Math.max(1, state.bestCombo), 810, 518, 30, INK, 'right', true);
+    UR.rrect(g, 455, 548, 370, 44, 10, '#e63946');
+    text(g, 'press SPACE for next service', 640, 571, 19, '#ffffff', 'center', true);
   }
 
   function drawHudAll(g, state, now) {
