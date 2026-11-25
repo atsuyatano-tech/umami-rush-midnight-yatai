@@ -86,9 +86,10 @@
       state.plate = ['noodles', 'pork-grilled'];
       state.prepTray = [{ kind: 'chopped', ing: 'onion' }, { kind: 'grilled', ing: 'egg', quality: 'perfect' }];
       state.passDish = { dishId: 'miso-ramen', quality: 'perfect', slide: 1 };
-      // the chef tends pan 1 at the GRILL, clear of the plating bowl so
-      // the mid-assembly bowl stays fully visible
-      state.chef.x = 478; state.chef.targetX = 478; state.chef.facing = 1;
+      // the chef stands in the gap between PLATING and PASS, covering
+      // NO pan, bowl, label or ticket — all three pans (PERFECT / RAW /
+      // BURNT), the plating bowl and every label stay fully visible
+      state.chef.x = 968; state.chef.targetX = 968; state.chef.facing = 1;
       state.chef.moving = false; state.chef.walkPhase = 0;
       state.chef.hands = [];
       puff(1090, 500, 3); puff(478, 505, 2);
