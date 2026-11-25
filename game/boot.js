@@ -1,6 +1,6 @@
 // boot.js — wires everything together: the fixed-timestep loop, the
 // service lifecycle (title -> play -> over), and a pose hook that stages
-// exact game states for screenshots (?pose=hero|juggle|planning|serve).
+// exact game states for screenshots (?pose=hero|calm|juggle|serve).
 (function () {
   'use strict';
   const UR = window.UR;
@@ -74,46 +74,53 @@
     state.mode = 'play';
     state.frozen = true;
     if (name === 'hero') {
+      // RUSH: every station alive, the full doneness gradient in one frame
       state.elapsed = 126; state.timeLeft = 24;
       state.score = 860; state.tips = 130; state.combo = 4; state.bestCombo = 6; state.servedCount = 7;
-      state.tickets = [ticket('deluxe-ramen', 0.9), ticket('miso-ramen', 0.55), ticket('shrimp-rice', 0.12)];
-      state.pans[0] = { item: { kind: 'plain', ing: 'pork' }, t: 8.2 };
-      state.pans[1] = { item: { kind: 'plain', ing: 'egg' }, t: 4.0 };
+      state.tickets = [ticket('deluxe-ramen', 0.9), ticket('miso-ramen', 0.55), ticket('shrimp-rice', 0.35)];
+      state.pans[0] = { item: { kind: 'plain', ing: 'pork' }, t: 8.2 };   // PERFECT, golden
+      state.pans[1] = { item: { kind: 'plain', ing: 'shrimp' }, t: 1.0 }; // pale raw, just placed
+      state.pans[2] = { item: { kind: 'plain', ing: 'egg' }, t: 12.6 };   // near-burnt, first smoke
       state.plate = ['noodles', 'pork-grilled'];
+      state.prepTray = [{ kind: 'chopped', ing: 'onion' }, { kind: 'grilled', ing: 'egg', quality: 'perfect' }];
       state.passDish = { dishId: 'pork-rice', quality: 'perfect', slide: 1 };
       state.chef.x = 745; state.chef.targetX = 850; state.chef.facing = 1;
       state.chef.moving = true; state.chef.walkPhase = 1.3;
       state.chef.hands = [{ kind: 'chopped', ing: 'onion' }];
-      state.popups.push({ x: 745, y: 428, text: 'COMBO x4', color: '#ff9f43', t: 0, life: 999, big: true });
       puff(1090, 500, 3); puff(478, 505, 2);
-    } else if (name === 'juggle') {
-      state.elapsed = 82; state.timeLeft = 68;
-      state.score = 540; state.tips = 70; state.combo = 3; state.servedCount = 4;
-      state.tickets = [ticket('shrimp-oko', 0.7), ticket('egg-ramen', 0.45)];
-      state.pans[0] = { item: { kind: 'plain', ing: 'shrimp' }, t: 1.2 };
-      state.pans[1] = { item: { kind: 'plain', ing: 'pork' }, t: 8.4 };
-      state.pans[2] = { item: { kind: 'plain', ing: 'egg' }, t: 13.1 };
-      state.chef.x = 752; state.chef.targetX = 662; state.chef.facing = -1; state.chef.moving = true;
-      puff(662, 500, 3);
-    } else if (name === 'planning') {
-      state.elapsed = 55; state.timeLeft = 95;
-      state.score = 320; state.tips = 40; state.combo = 2; state.servedCount = 2;
-      state.tickets = [ticket('miso-ramen', 0.8), ticket('shrimp-rice', 0.65)];
-      state.pans[1] = { item: { kind: 'plain', ing: 'pork' }, t: 5.0 };
+    } else if (name === 'calm' || name === 'planning') {
+      // Early calm service: one ticket, chef mid-chop, one raw pan, full timer
+      state.elapsed = 8; state.timeLeft = 142;
+      state.score = 40; state.tips = 0; state.combo = 0; state.servedCount = 0;
+      state.tickets = [ticket('miso-ramen', 0.92)];
+      state.pans[0] = { item: { kind: 'plain', ing: 'pork' }, t: 1.1 };
       state.prepTray = [{ kind: 'chopped', ing: 'onion' }];
       state.chef.x = 330; state.chef.targetX = 330;
       state.chef.hands = [{ kind: 'plain', ing: 'onion' }];
       state.chef.action = { type: 'chop', t: 0.55, dur: 1.1, idx: 0 };
+      puff(478, 505, 1);
+    } else if (name === 'juggle') {
+      // Three-pan juggle: raw / PERFECT / burnt with smoke, patience in red
+      state.elapsed = 82; state.timeLeft = 68;
+      state.score = 540; state.tips = 70; state.combo = 3; state.servedCount = 4;
+      state.tickets = [ticket('shrimp-oko', 0.7), ticket('egg-ramen', 0.14)];
+      state.pans[0] = { item: { kind: 'plain', ing: 'shrimp' }, t: 1.2 };
+      state.pans[1] = { item: { kind: 'plain', ing: 'pork' }, t: 8.4 };
+      state.pans[2] = { item: { kind: 'plain', ing: 'egg' }, t: 14.2 };
+      state.chef.x = 752; state.chef.targetX = 662; state.chef.facing = -1; state.chef.moving = true;
+      state.chef.walkPhase = 0.7;
+      puff(662, 500, 3);
     } else if (name === 'serve') {
+      // The serve moment: popup, combo x7, a customer receiving the bowl
       state.elapsed = 93; state.timeLeft = 57;
       state.score = 1240; state.tips = 210; state.combo = 7; state.bestCombo = 7; state.servedCount = 11;
-      const arriving = ticket('egg-ramen', 0.95); arriving.slide = 0.85;
+      const arriving = ticket('egg-ramen', 0.95); arriving.slide = 0.94;
       state.tickets = [ticket('corn-oko', 0.8), arriving];
-      state.passDish = { dishId: 'miso-ramen', quality: 'perfect', slide: 0.45 };
+      state.passDish = { dishId: 'miso-ramen', quality: 'perfect', slide: 1 };
       state.chef.x = 985; state.chef.targetX = 1090; state.chef.facing = 1; state.chef.moving = true;
       state.chef.walkPhase = 2.1;
       state.popups.push({ x: 1090, y: 428, text: '+PERFECT! +145', color: '#ffd93d', t: 0, life: 999, big: true });
-      state.popups.push({ x: 1090, y: 500, text: 'COMBO x7', color: '#ff9f43', t: 0, life: 999, big: false });
+      state.popups.push({ x: 1090, y: 655, text: 'COMBO x7', color: '#ff9f43', t: 0, life: 999, big: false });
       state.bellFlash = 0.4;
       puff(1000, 500, 2);
     }
