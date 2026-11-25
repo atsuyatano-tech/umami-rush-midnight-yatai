@@ -107,14 +107,33 @@
     disc(g, x - r * 0.16, y - r * 0.16, r * 0.2, '#ffc65c');
   }
 
+  // Garnish, two distinct shapes so the repeated green element never
+  // reads as peas: chopped spring onion = thin HOLLOW rings (the food
+  // shows through the middle), herbs = pointed leaf shapes.
   function onionScatter(g, x, y, R, n) {
     for (let i = 0; i < (n || 6); i++) {
       const a = i * 2.39, d = R * (0.25 + (i % 3) * 0.22);
       const px = x + Math.cos(a) * d, py = y - R * 0.18 + Math.sin(a) * d * 0.4;
-      g.beginPath(); g.arc(px, py, R * 0.11, 0, Math.PI * 2);
-      g.strokeStyle = '#2f9e44'; g.lineWidth = 3; g.stroke();
-      g.beginPath(); g.arc(px, py, R * 0.05, 0, Math.PI * 2);
-      g.strokeStyle = '#8ce99a'; g.lineWidth = 2; g.stroke();
+      if (i % 3 === 2) {
+        // herb leaf: a pointed ellipse with a centre vein
+        g.save();
+        g.translate(px, py); g.rotate(a + 0.7);
+        g.beginPath();
+        g.moveTo(-R * 0.14, 0);
+        g.quadraticCurveTo(0, -R * 0.11, R * 0.14, 0);
+        g.quadraticCurveTo(0, R * 0.11, -R * 0.14, 0);
+        g.closePath();
+        g.fillStyle = '#2b8a3e'; g.fill();
+        g.strokeStyle = '#1e6b30'; g.lineWidth = 1.6; g.stroke();
+        g.beginPath(); g.moveTo(-R * 0.11, 0); g.lineTo(R * 0.11, 0); g.stroke();
+        g.restore();
+      } else {
+        // onion ring: hollow — no fill at all, just two thin walls
+        g.beginPath(); g.arc(px, py, R * 0.115, 0, Math.PI * 2);
+        g.strokeStyle = '#2f9e44'; g.lineWidth = 2.6; g.stroke();
+        g.beginPath(); g.arc(px, py, R * 0.062, 0, Math.PI * 2);
+        g.strokeStyle = '#8ce99a'; g.lineWidth = 1.8; g.stroke();
+      }
     }
   }
 
@@ -247,8 +266,10 @@
 
   function drawShrimp(g, x, y, s, grilled) {
     const R = s * 1.5;
-    const body = grilled ? '#ff7b54' : '#ffa07a';
-    const band = grilled ? '#ffd9c4' : '#ffe8d6';
+    // RAW shrimp is pale grey-blue and translucent (pink would mean it is
+    // already cooked); only the grilled shrimp turns pink-orange.
+    const body = grilled ? '#ff7b54' : '#a9bfd2';
+    const band = grilled ? '#ffd9c4' : '#dbe7f0';
     g.save();
     g.translate(x, y); g.rotate(-0.5);
     // tail fan
@@ -257,7 +278,7 @@
     g.lineTo(R * 1.0, -R * 0.5); g.lineTo(R * 0.92, -R * 0.02);
     g.lineTo(R * 1.02, R * 0.34); g.lineTo(R * 0.52, R * 0.3);
     g.closePath();
-    g.fillStyle = grilled ? '#e85d3d' : '#ff8fa3'; g.fill();
+    g.fillStyle = grilled ? '#e85d3d' : '#8fa9bf'; g.fill();
     g.lineWidth = 4; g.strokeStyle = INK; g.stroke();
     // curved segmented body: stacked arcs from tail to head
     const segs = 5;
@@ -291,11 +312,11 @@
       const offs = [[0, -0.1], [-0.45, 0.18], [0.42, 0.22], [-0.2, -0.42], [0.3, -0.38], [0.02, 0.42], [-0.52, -0.2], [0.55, -0.05]];
       for (const o of offs) {
         const px = x + o[0] * R, py = y + o[1] * R;
+        // thin hollow rings: no fill, so the middle stays see-through
         g.beginPath(); g.arc(px, py, R * 0.21, 0, Math.PI * 2);
-        g.fillStyle = '#d3f9d8'; g.fill();
-        g.lineWidth = 4.5; g.strokeStyle = '#2f9e44'; g.stroke();
-        g.beginPath(); g.arc(px, py, R * 0.09, 0, Math.PI * 2);
-        g.strokeStyle = '#51cf66'; g.lineWidth = 2.5; g.stroke();
+        g.lineWidth = 3.2; g.strokeStyle = '#2f9e44'; g.stroke();
+        g.beginPath(); g.arc(px, py, R * 0.115, 0, Math.PI * 2);
+        g.strokeStyle = '#69db7c'; g.lineWidth = 2; g.stroke();
       }
     } else {
       // a bunch of spring onions: white bulbs, long green blades, cut rings
@@ -395,7 +416,11 @@
       disc(g, x, y, 37, '#ffd93d');
       g.restore();
     }
-    drawItemIcon(g, ing + '-grilled', x, y, s);
+    // a RAW (or just-cooking) shrimp keeps its raw grey-blue sprite —
+    // the pink-orange grilled sprite only appears once it is cooked
+    const iconId = (ing === 'shrimp' && (stage === 'raw' || stage === 'cooking'))
+      ? ing : ing + '-grilled';
+    drawItemIcon(g, iconId, x, y, s);
     g.save();
     g.beginPath(); g.arc(x, y, 33, 0, Math.PI * 2); g.clip();
     if (stage === 'raw') {
@@ -405,17 +430,21 @@
     } else if (stage === 'overdone') {
       g.fillStyle = 'rgba(122,58,10,0.42)'; g.fillRect(x - 34, y - 34, 68, 68);
     } else if (stage === 'burnt') {
-      // fully blackened: a near-opaque char layer, cracked char marks and
-      // ash spots, so BURNT reads from the food alone, never from a label
-      g.fillStyle = 'rgba(3,3,5,0.9)'; g.fillRect(x - 34, y - 34, 68, 68);
-      g.fillStyle = 'rgba(38,38,44,0.95)';
-      disc(g, x - 12, y - 6, 10); disc(g, x + 10, y + 8, 12); disc(g, x + 2, y - 14, 8); disc(g, x - 4, y + 16, 7);
-      g.strokeStyle = 'rgba(120,120,130,0.85)'; g.lineWidth = 2.5; g.lineCap = 'round';
-      g.beginPath(); g.moveTo(x - 22, y - 18); g.lineTo(x - 6, y - 2); g.lineTo(x - 14, y + 14); g.stroke();
-      g.beginPath(); g.moveTo(x + 20, y - 20); g.lineTo(x + 8, y - 4); g.lineTo(x + 18, y + 10); g.stroke();
-      g.beginPath(); g.moveTo(x - 24, y + 4); g.lineTo(x - 8, y + 6); g.stroke();
-      g.fillStyle = 'rgba(190,190,200,0.5)';
-      disc(g, x - 18, y + 20, 3); disc(g, x + 16, y - 24, 3); disc(g, x + 24, y + 18, 2.5);
+      // charred but NOT erased: a translucent near-black char wash lets
+      // the food's own silhouette (curved shrimp / wavy egg) show through
+      // in near-black, split by dark-red crack lines, dusted with ash —
+      // ruined food, never an empty black disc
+      g.fillStyle = 'rgba(5,4,6,0.58)'; g.fillRect(x - 34, y - 34, 68, 68);
+      g.fillStyle = 'rgba(16,12,14,0.5)';
+      disc(g, x - 12, y - 6, 9); disc(g, x + 11, y + 9, 10); disc(g, x + 2, y - 15, 7);
+      g.strokeStyle = '#a83226'; g.lineWidth = 2.8; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(x - 24, y - 20); g.lineTo(x - 7, y - 3); g.lineTo(x - 15, y + 15); g.stroke();
+      g.beginPath(); g.moveTo(x + 22, y - 22); g.lineTo(x + 9, y - 5); g.lineTo(x + 19, y + 11); g.stroke();
+      g.beginPath(); g.moveTo(x - 26, y + 5); g.lineTo(x - 9, y + 7); g.lineTo(x + 4, y - 6); g.stroke();
+      g.strokeStyle = '#641e16'; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(x - 2, y + 22); g.lineTo(x + 6, y + 8); g.stroke();
+      g.fillStyle = 'rgba(200,200,208,0.65)';
+      disc(g, x - 18, y + 20, 3); disc(g, x + 16, y - 24, 3); disc(g, x + 24, y + 18, 2.5); disc(g, x - 26, y - 8, 2.5);
     }
     g.restore();
     if (stage === 'perfect') { // shine sparkles
@@ -455,7 +484,9 @@
   }
 
   // A finished dish: the real bowl, filled component by component.
-  function drawDish(g, dishId, x, y, s) {
+  // bowlColor, when given, overrides the family bowl colour (the PASS
+  // serves in a deep-blue bowl so it never matches the plating bowl).
+  function drawDish(g, dishId, x, y, s, bowlColor) {
     const dish = UR.dishById(dishId);
     if (!dish) return;
     const base = dish.components[0];
@@ -470,7 +501,7 @@
       });
       return;
     }
-    drawBowlBase(g, x, y, R, base === 'rice' ? '#4361ee' : '#e63946');
+    drawBowlBase(g, x, y, R, bowlColor || (base === 'rice' ? '#4361ee' : '#e63946'));
     if (base === 'rice') {
       g.beginPath(); g.ellipse(x, y - R * 0.2, R * 0.84, R * 0.3, 0, Math.PI, Math.PI * 2);
       g.closePath();
