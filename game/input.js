@@ -37,10 +37,10 @@
   }
 
   function handleClick(state, x, y) {
-    // Fridge bins (drawn at the fridge, y 500..600, three columns).
-    if (x > 30 && x < 235 && y > 495 && y < 610) {
-      const col = Math.min(2, ((x - 38) / 66) | 0);
-      const row = Math.min(2, ((y - 500) / 38) | 0);
+    // Fridge bins (drawn at the fridge, y 494..632, three columns).
+    if (x > 30 && x < 238 && y > 492 && y < 634) {
+      const col = Math.min(2, ((x - 32) / 68) | 0);
+      const row = Math.min(2, ((y - 494) / 46) | 0);
       const ing = UR.INGREDIENTS[row * 3 + col];
       if (ing) UR.sendChefTo(state, UR.STATIONS[0].x, () => UR.pickIngredient(state, ing.id));
       return;
